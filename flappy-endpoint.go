@@ -5,14 +5,25 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"github.com/newrelic/go-agent"
+	"os"
 )
 
 var threeSeconds time.Duration
 
 func main() {
 	threeSeconds, _ = time.ParseDuration("3s")
-	http.HandleFunc("/", makeHandler(defaultPage))
-	http.HandleFunc("/flappy", makeHandler(flappyPage))
+	config := newrelic.NewConfig(os.Getenv("NEW_RELIC_APP_NAME"), os.Getenv("NEW_RELIC_LICENSE_KEY"))
+	app, err := newrelic.NewApplication(config)
+
+	if err != nil {
+		http.HandleFunc("/", makeHandler(defaultPage))
+		http.HandleFunc("/flappy", makeHandler(flappyPage))
+	} else {
+		http.HandleFunc(newrelic.WrapHandleFunc(app, "/", makeHandler(defaultPage)))
+		http.HandleFunc(newrelic.WrapHandleFunc(app, "/flappy", makeHandler(flappyPage)))
+	}
+
 	fmt.Println("Listening on port :8080")
 	http.ListenAndServe(":8080", nil)
 }
